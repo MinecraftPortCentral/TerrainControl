@@ -4,17 +4,23 @@ import com.khorn.terraincontrol.LocalBiome;
 import com.khorn.terraincontrol.bukkit.BukkitBiome;
 import com.khorn.terraincontrol.configuration.WorldSettings;
 import com.khorn.terraincontrol.util.minecraftTypes.StructureNames;
-import net.minecraft.server.v1_7_R3.*;
+import net.minecraft.world.ChunkCoordIntPair;
+import net.minecraft.world.ChunkPosition;
+import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.gen.structure.MapGenStronghold;
+import net.minecraft.world.gen.structure.MapGenStructure;
+import net.minecraft.world.gen.structure.StructureStart;
+import net.minecraft.world.gen.structure.StructureStrongholdPieces;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-public class StrongholdGen extends StructureGenerator
+public class StrongholdGen extends MapGenStructure
 {
+    private List<BiomeGenBase> allowedBiomeGenBases;
 
-    private List<BiomeBase> allowedBiomes;
     private boolean ranBiomeCheck;
     private ChunkCoordIntPair[] structureCoords;
     private double distance;
@@ -26,7 +32,7 @@ public class StrongholdGen extends StructureGenerator
         this.structureCoords = new ChunkCoordIntPair[configs.worldConfig.strongholdCount];
         this.spread = configs.worldConfig.strongholdSpread;
 
-        allowedBiomes = new ArrayList<BiomeBase>();
+        allowedBiomeGenBases = new ArrayList<BiomeGenBase>();
 
         for (LocalBiome biome : configs.biomes)
         {
@@ -34,44 +40,43 @@ public class StrongholdGen extends StructureGenerator
                 continue;
             if (biome.getBiomeConfig().strongholdsEnabled)
             {
-                allowedBiomes.add(((BukkitBiome) biome).getHandle());
+                allowedBiomeGenBases.add(((BukkitBiome) biome).getHandle());
             }
         }
     }
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
     @Override
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    protected boolean a(int i, int j)
+    protected boolean canSpawnStructureAtCoords(int par1, int par2)
     {
         if (!this.ranBiomeCheck)
         {
             Random random = new Random();
+            random.setSeed(this.worldObj.getSeed());
+            double randomNumBetween0and2PI = random.nextDouble() * Math.PI * 2.0D;
+            int var6 = 1;
 
-            random.setSeed(this.c.getSeed());
-            double d0 = random.nextDouble() * 3.141592653589793D * 2.0D;
-            int k = 1;
-
-            for (int l = 0; l < this.structureCoords.length; ++l)
+            for (int i = 0; i < this.structureCoords.length; ++i)
             {
-                double d1 = (1.25D * k + random.nextDouble()) * this.distance * k;
-                int i1 = (int) Math.round(Math.cos(d0) * d1);
-                int j1 = (int) Math.round(Math.sin(d0) * d1);
-                ArrayList arraylist = new ArrayList();
+                double var8 = (1.25D * (double) var6 + random.nextDouble()) * this.distance * (double) var6;
+                int var10 = (int) Math.round(Math.cos(randomNumBetween0and2PI) * var8);
+                int var11 = (int) Math.round(Math.sin(randomNumBetween0and2PI) * var8);
+                ArrayList var12 = new ArrayList();
+                Collections.addAll(var12, this.allowedBiomeGenBases);
+                ChunkPosition var13 = this.worldObj.getWorldChunkManager().findBiomePosition((var10 << 4) + 8, (var11 << 4) + 8, 112, var12, random);
 
-                Collections.addAll(arraylist, this.allowedBiomes);
-                ChunkPosition chunkposition = this.c.getWorldChunkManager().a((i1 << 4) + 8, (j1 << 4) + 8, 112, arraylist, random);
-
-                if (chunkposition != null)
+                if (var13 != null)
                 {
-                    i1 = chunkposition.x >> 4;
-                    j1 = chunkposition.z >> 4;
+                    var10 = var13.chunkPosX >> 4;
+                    var11 = var13.chunkPosZ >> 4;
                 }
 
-                this.structureCoords[l] = new ChunkCoordIntPair(i1, j1);
-                d0 += 6.283185307179586D * k / this.spread;
-                if (l == this.spread)
+                this.structureCoords[i] = new ChunkCoordIntPair(var10, var11);
+                randomNumBetween0and2PI += (Math.PI * 2D) * (double) var6 / (double) this.spread;
+
+                if (i == this.spread)
                 {
-                    k += 2 + random.nextInt(5);
+                    var6 += 2 + random.nextInt(5);
                     this.spread += 1 + random.nextInt(2);
                 }
             }
@@ -79,11 +84,11 @@ public class StrongholdGen extends StructureGenerator
             this.ranBiomeCheck = true;
         }
 
-        ChunkCoordIntPair[] achunkcoordintpair = this.structureCoords;
+        ChunkCoordIntPair[] structureCoordsLocal = this.structureCoords;
 
-        for (ChunkCoordIntPair chunkcoordintpair : achunkcoordintpair)
+        for (ChunkCoordIntPair structureCoord : structureCoordsLocal)
         {
-            if (i == chunkcoordintpair.x && j == chunkcoordintpair.z)
+            if (par1 == structureCoord.chunkXPos && par2 == structureCoord.chunkZPos)
             {
                 return true;
             }
@@ -92,51 +97,41 @@ public class StrongholdGen extends StructureGenerator
         return false;
     }
 
+    /**
+     * Returns a list of other locations at which the structure generation has
+     * been run, or null if not relevant to this structure generator.
+     */
     @Override
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    protected List o_()
-    {
-        ArrayList arraylist = new ArrayList();
-        ChunkCoordIntPair[] achunkcoordintpair = this.structureCoords;
+    protected List<ChunkPosition> getCoordList()
+    {       
+        ArrayList<ChunkPosition> chunkPositions = new ArrayList<ChunkPosition>();
 
-        for (ChunkCoordIntPair chunkcoordintpair : achunkcoordintpair)
+        for (ChunkCoordIntPair structureCoord : structureCoords)
         {
-            if (chunkcoordintpair != null)
+            if (structureCoord != null)
             {
-                arraylist.add(chunkcoordintpair.a(64));
+                chunkPositions.add(structureCoord.func_151349_a(64));
             }
         }
 
-        return arraylist;
+        return chunkPositions;
     }
 
     @Override
-    protected StructureStart b(int chunkX, int chunkZ)
+    protected StructureStart getStructureStart(int par1, int par2)
     {
-        WorldGenStronghold2Start strongholdStart = new WorldGenStronghold2Start(this.c, this.b, chunkX, chunkZ);
+        MapGenStronghold.Start start = new MapGenStronghold.Start(this.worldObj, this.rand, par1, par2);
 
-        while (strongholdStart.b().isEmpty() || ((WorldGenStrongholdStart) strongholdStart.b().get(0)).b == null)
+        while (start.getComponents().isEmpty() || ((StructureStrongholdPieces.Stairs2) start.getComponents().get(0)).strongholdPortalRoom == null)
         {
-            strongholdStart = new WorldGenStronghold2Start(this.c, this.b, chunkX, chunkZ);
+            start = new MapGenStronghold.Start(this.worldObj, this.rand, par1, par2);
         }
 
-        return strongholdStart;
-    }
-
-    // Two methods to help MCPC+ dynamically rename things.
-    // It has problems with classes that extend native Minecraft classes
-    public void prepare(World world, int chunkX, int chunkZ)
-    {
-        a(null, world, chunkX, chunkZ, null);
-    }
-
-    public void place(World world, Random random, int chunkX, int chunkZ)
-    {
-        a(world, random, chunkX, chunkZ);
+        return start;
     }
 
     @Override
-    public String a()
+    public String func_143025_a()
     {
         return StructureNames.STRONGHOLD;
     }

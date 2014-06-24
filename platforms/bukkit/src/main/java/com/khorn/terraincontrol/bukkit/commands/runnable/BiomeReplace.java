@@ -3,9 +3,15 @@ package com.khorn.terraincontrol.bukkit.commands.runnable;
 import com.khorn.terraincontrol.TerrainControl;
 import com.khorn.terraincontrol.bukkit.commands.BaseCommand;
 import com.khorn.terraincontrol.logging.LogMarker;
-import net.minecraft.server.v1_7_R3.*;
+
+import net.minecraft.nbt.CompressedStreamTools;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.world.chunk.storage.AnvilChunkLoader;
+import net.minecraft.world.chunk.storage.RegionFile;
+import net.minecraft.world.gen.ChunkProviderServer;
+
 import org.bukkit.command.CommandSender;
-import org.bukkit.craftbukkit.v1_7_R3.CraftWorld;
+import org.bukkit.craftbukkit.CraftWorld;
 
 import java.io.*;
 import java.lang.reflect.Field;
@@ -80,9 +86,9 @@ public class BiomeReplace implements Runnable
 
             chunkLoaderField.setAccessible(true);
 
-            ChunkRegionLoader chunkLoader = (ChunkRegionLoader) chunkLoaderField.get(chunkProviderServer);
+            AnvilChunkLoader chunkLoader = (AnvilChunkLoader) chunkLoaderField.get(chunkProviderServer);
 
-            Field chunkLoaderLockField = ChunkRegionLoader.class.getDeclaredField("c");
+            Field chunkLoaderLockField = AnvilChunkLoader.class.getDeclaredField("pendingAnvilChunksCoordinates");
 
             chunkLoaderLockField.setAccessible(true);
 
@@ -93,8 +99,8 @@ public class BiomeReplace implements Runnable
 
                 sender.sendMessage(BaseCommand.MESSAGE_COLOR + "Unload all chunks");
 
-                chunkProviderServer.a();
-                chunkProviderServer.unloadChunks();
+                chunkProviderServer.unloadAllChunks();
+                chunkProviderServer.unloadQueuedChunks();
 
 
                 sender.sendMessage(BaseCommand.MESSAGE_COLOR + "Start replace...");
@@ -123,16 +129,16 @@ public class BiomeReplace implements Runnable
                     {
                         for (int z = 0; z < 32; z++)
                         {
-                            if (!file.c(x, z))
+                            if (!file.isChunkSaved(x, z))
                                 continue;
 
-                            DataInputStream localDataInputStream = file.a(x, z);
+                            DataInputStream localDataInputStream = file.getChunkDataInputStream(x, z);
 
-                            NBTTagCompound localNBTTagCompound1 = NBTCompressedStreamTools.a((DataInput) localDataInputStream, NBTReadLimiter.a);
+                            NBTTagCompound localNBTTagCompound1 = CompressedStreamTools.read((DataInput) localDataInputStream);
 
                             localDataInputStream.close();
 
-                            NBTTagCompound chunkTag = localNBTTagCompound1.getCompound("Level");
+                            NBTTagCompound chunkTag = localNBTTagCompound1.getCompoundTag("Level");
 
                             if (chunkTag.hasKey("Biomes"))
                             {
@@ -153,8 +159,8 @@ public class BiomeReplace implements Runnable
                                     chunkTag.setByteArray("Biomes", biomeArray);
                                     chunksRewritten++;
 
-                                    DataOutputStream localDataOutputStream = file.b(x, z);
-                                    NBTCompressedStreamTools.a(localNBTTagCompound1, (DataOutput) localDataOutputStream);
+                                    DataOutputStream localDataOutputStream = file.getChunkDataOutputStream(x, z);
+                                    CompressedStreamTools.write(localNBTTagCompound1, (DataOutput) localDataOutputStream);
                                     localDataOutputStream.close();
 
                                 }

@@ -6,7 +6,10 @@ import com.khorn.terraincontrol.TerrainControl;
 import com.khorn.terraincontrol.bukkit.util.WorldHelper;
 import com.khorn.terraincontrol.configuration.BiomeConfig.VillageType;
 import com.khorn.terraincontrol.logging.LogMarker;
-import net.minecraft.server.v1_7_R3.*;
+import net.minecraft.world.World;
+import net.minecraft.world.gen.structure.StructureComponent;
+import net.minecraft.world.gen.structure.StructureStart;
+import net.minecraft.world.gen.structure.StructureVillagePieces;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -17,14 +20,14 @@ public class VillageStart extends StructureStart
     // well ... thats what it does
     private boolean hasMoreThanTwoComponents = false;
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public VillageStart(World world, Random random, int chunkX, int chunkZ, int size)
     {
-        List<StructurePiece> villagePieces = WorldGenVillagePieces.a(random, size);
-        
+        List<StructureComponent> villagePieces = StructureVillagePieces.getStructureVillageWeightedPieceList(random, size);
+
         int startX = (chunkX << 4) + 2;
         int startZ = (chunkZ << 4) + 2;
-        WorldGenVillageStartPiece startPiece = new WorldGenVillageStartPiece(world.getWorldChunkManager(), 0, random, startX, startZ, villagePieces, size);
+        StructureVillagePieces.Start startPiece = new StructureVillagePieces.Start(world.getWorldChunkManager(), 0, random, startX, startZ, villagePieces, size);
 
         // Apply the villageType setting
         LocalWorld worldTC = WorldHelper.toLocalWorld(world);
@@ -34,52 +37,46 @@ public class VillageStart extends StructureStart
             // Ignore removed custom biomes
             changeToSandstoneVillage(startPiece, biome.getBiomeConfig().villageType == VillageType.sandstone);
         }
-        
-        this.a.add(startPiece);
-        startPiece.a(startPiece, this.a, random);
-        List<StructurePiece> arraylist1 = startPiece.j;
-        List<StructurePiece> arraylist2 = startPiece.i;
 
-        int componentCount;
+        this.components.add(startPiece);
+        startPiece.buildComponent(startPiece, this.components, random);
+        List var8 = startPiece.field_74930_j;
+        List var9 = startPiece.field_74932_i;
+        int var10;
 
-        while (!arraylist1.isEmpty() || !arraylist2.isEmpty())
+        while (!var8.isEmpty() || !var9.isEmpty())
         {
-            StructurePiece structurepiece;
+            StructureComponent var11;
 
-            if (arraylist1.isEmpty())
+            if (var8.isEmpty())
             {
-                componentCount = random.nextInt(arraylist2.size());
-                structurepiece = arraylist2.remove(componentCount);
-                structurepiece.a(startPiece, this.a, random);
+                var10 = random.nextInt(var9.size());
+                var11 = (StructureComponent) var9.remove(var10);
+                var11.buildComponent(startPiece, this.components, random);
             } else
             {
-                componentCount = random.nextInt(arraylist1.size());
-                structurepiece = arraylist1.remove(componentCount);
-                structurepiece.a(startPiece, this.a, random);
+                var10 = random.nextInt(var8.size());
+                var11 = (StructureComponent) var8.remove(var10);
+                var11.buildComponent(startPiece, this.components, random);
             }
         }
 
-        this.c();
-        componentCount = 0;
+        this.updateBoundingBox();
+        var10 = 0;
 
-        for (Object anA : this.a)
+        for (Object component : this.components)
         {
-            StructurePiece structurepiece1 = (StructurePiece) anA;
+            StructureComponent var12 = (StructureComponent) component;
 
-            if (!(structurepiece1 instanceof WorldGenVillageRoadPiece))
+            if (!(var12 instanceof StructureVillagePieces.Road))
             {
-                ++componentCount;
+                ++var10;
             }
         }
 
-        this.hasMoreThanTwoComponents = componentCount > 2;
+        this.hasMoreThanTwoComponents = var10 > 2;
     }
-    
-    public VillageStart()
-    {
-        // Required by Minecraft's structure loading code
-    }
-    
+
     /**
      * Just sets the first boolean it can find in the
      * WorldGenVillageStartPiece.class to sandstoneVillage.
@@ -87,9 +84,9 @@ public class VillageStart extends StructureStart
      * @param sandstoneVillage Whether the village should be a sandstone
      *                         village.
      */
-    private void changeToSandstoneVillage(WorldGenVillageStartPiece subject, boolean sandstoneVillage)
+    private void changeToSandstoneVillage(StructureVillagePieces.Start subject, boolean sandstoneVillage)
     {
-        for (Field field : WorldGenVillageStartPiece.class.getFields())
+        for (Field field : StructureVillagePieces.Start.class.getFields())
         {
             if (field.getType().toString().equals("boolean"))
             {
@@ -107,9 +104,17 @@ public class VillageStart extends StructureStart
         }
     }
 
+    /**
+     * currently only defined for Villages, returns true if Village has more than 2 non-road components
+     */
     @Override
-    public boolean d()
+    public boolean isSizeableStructure()
     {
         return this.hasMoreThanTwoComponents;
+    }
+
+    public VillageStart()
+    {
+        // Required by Minecraft's structure loading code
     }
 }

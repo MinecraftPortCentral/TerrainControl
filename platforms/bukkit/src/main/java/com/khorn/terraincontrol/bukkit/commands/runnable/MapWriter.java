@@ -7,8 +7,10 @@ import com.khorn.terraincontrol.bukkit.commands.BaseCommand;
 import com.khorn.terraincontrol.bukkit.util.WorldHelper;
 import com.khorn.terraincontrol.configuration.BiomeConfig;
 import com.khorn.terraincontrol.logging.LogMarker;
-import net.minecraft.server.v1_7_R3.BiomeBase;
-import net.minecraft.server.v1_7_R3.World;
+
+import net.minecraft.world.World;
+import net.minecraft.world.biome.BiomeGenBase;
+
 import org.bukkit.command.CommandSender;
 
 import java.awt.Color;
@@ -61,7 +63,7 @@ public class MapWriter implements Runnable
      */
     private int[] getColors(World world)
     {
-        TerrainControl.log(LogMarker.TRACE, "BukkitWorld::UUID:: {}", world.getDataManager().getUUID());
+        TerrainControl.log(LogMarker.TRACE, "BukkitWorld::UUID:: {}", world.getSaveHandler().getUUID());
         LocalWorld bukkitWorld = WorldHelper.toLocalWorld(world);
         if (bukkitWorld == null)
         {
@@ -104,7 +106,7 @@ public class MapWriter implements Runnable
 
         sender.sendMessage(BaseCommand.MESSAGE_COLOR + "Generating map...");
 
-        BiomeBase[] biomeBuffer = new BiomeBase[256];
+        BiomeGenBase[] biomeBuffer = new BiomeGenBase[256];
         long time = System.currentTimeMillis();
 
         BufferedImage biomeImage = new BufferedImage(height * 16, width * 16, BufferedImage.TYPE_INT_RGB);
@@ -130,7 +132,7 @@ public class MapWriter implements Runnable
                     time = time2;
                 }
 
-                biomeBuffer = world.getWorldChunkManager().getBiomeBlock(biomeBuffer, offsetX + x * 16, offsetZ + z * 16, 16, 16);
+                biomeBuffer = world.getWorldChunkManager().loadBlockGeneratorData(biomeBuffer, offsetX + x * 16, offsetZ + z * 16, 16, 16);
                 for (int x1 = 0; x1 < 16; x1++)
                 {
                     for (int z1 = 0; z1 < 16; z1++)
@@ -181,10 +183,10 @@ public class MapWriter implements Runnable
         try
         {
             // Write biome colors
-            ImageIO.write(biomeImage, "png", new File(label + world.worldData.getName() + "_biome.png"));
+            ImageIO.write(biomeImage, "png", new File(label + world.worldInfo.getWorldName() + "_biome.png"));
 
             // Write temperatures
-            ImageIO.write(temperatureImage, "png", new File(label + world.worldData.getName() + "_temperature.png"));
+            ImageIO.write(temperatureImage, "png", new File(label + world.worldInfo.getWorldName() + "_temperature.png"));
 
             sender.sendMessage(BaseCommand.MESSAGE_COLOR + "Done");
         } catch (IOException e)
@@ -206,7 +208,7 @@ public class MapWriter implements Runnable
      *            managed by Terrain Control.
      * @return The temperature color.
      */
-    private Color getBiomeTemperatureColor(BiomeBase biome, LocalWorld world)
+    private Color getBiomeTemperatureColor(BiomeGenBase biome, LocalWorld world)
     {
         float temperature;
         if (world != null)

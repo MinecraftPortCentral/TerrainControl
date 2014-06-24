@@ -1,8 +1,9 @@
 package com.khorn.terraincontrol.bukkit.generator;
 
 import com.khorn.terraincontrol.bukkit.BukkitWorld;
-import net.minecraft.server.v1_7_R3.WorldProvider;
-import net.minecraft.server.v1_7_R3.WorldProviderNormal;
+
+import net.minecraft.world.WorldProvider;
+import net.minecraft.world.WorldProviderSurface;
 
 /**
  * We extend this file to be able to set the sea level.
@@ -10,7 +11,7 @@ import net.minecraft.server.v1_7_R3.WorldProviderNormal;
  * The value seem to be hardcoded in CraftWorld and we are a bit unsure about if that matters.
  * At least it should be a good thing that we set the value here.
  */
-public class TCWorldProvider extends WorldProviderNormal
+public class TCWorldProvider extends WorldProviderSurface
 {
     protected BukkitWorld localWorld;
     private final WorldProvider oldWorldProvider;
@@ -19,19 +20,19 @@ public class TCWorldProvider extends WorldProviderNormal
     {
         this.localWorld = localWorld;
         this.oldWorldProvider = oldWorldProvider;
-        this.a(localWorld.getWorld());
-        this.f = oldWorldProvider.f;
-        this.g = oldWorldProvider.g;
+        super.registerWorld(localWorld.getWorld());
+        super.isHellWorld = oldWorldProvider.isHellWorld;
+        super.hasNoSky = oldWorldProvider.hasNoSky;
     }
 
     @Override
-    public int getSeaLevel()
+    public int getAverageGroundLevel ()
     {
         return localWorld.getSettings().worldConfig.waterLevelMax;
     }
 
     @Override
-    public String getName()
+    public String getDimensionName()
     {
         return "Overworld";
     }

@@ -6,18 +6,19 @@ import com.khorn.terraincontrol.configuration.BiomeConfig;
 import com.khorn.terraincontrol.configuration.WeightedMobSpawnGroup;
 import com.khorn.terraincontrol.logging.LogMarker;
 import com.khorn.terraincontrol.util.minecraftTypes.MobNames;
-import net.minecraft.server.v1_7_R3.BiomeBase;
-import net.minecraft.server.v1_7_R3.BiomeMeta;
-import net.minecraft.server.v1_7_R3.Entity;
-import net.minecraft.server.v1_7_R3.EntityTypes;
+
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityList;
+import net.minecraft.world.biome.BiomeGenBase;
+
 import org.bukkit.block.Biome;
-import org.bukkit.craftbukkit.v1_7_R3.block.CraftBlock;
+import org.bukkit.craftbukkit.block.CraftBlock;
 
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 
-public class CustomBiome extends BiomeBase
+public class CustomBiome extends BiomeGenBase
 {
     public final int generationId;
 
@@ -37,9 +38,9 @@ public class CustomBiome extends BiomeBase
         {
             // Don't register (the only way to do this on Bukkit is to restore
             // the original biome afterwards)
-            BiomeBase toRestore = BiomeBase.getBiome(biomeIds.getSavedId());
+            BiomeGenBase toRestore = BiomeGenBase.getBiome(biomeIds.getSavedId());
             CustomBiome customBiome = new CustomBiome(name, biomeIds);
-            BiomeBase.n()[biomeIds.getSavedId()] = toRestore;
+            BiomeGenBase.getBiomeGenArray()[biomeIds.getSavedId()] = toRestore;
 
             return customBiome;
         } else
@@ -54,7 +55,7 @@ public class CustomBiome extends BiomeBase
     {
         super(biomeIds.getSavedId());
         this.generationId = biomeIds.getGenerationId();
-        this.a(name);
+        this.setBiomeName(name);
 
         // Insert the biome in CraftBukkit's biome mapping
         if (!biomeIds.isVirtual())
@@ -65,7 +66,7 @@ public class CustomBiome extends BiomeBase
                 biomeMapping.setAccessible(true);
                 Biome[] mappingArray = (Biome[]) biomeMapping.get(null);
 
-                mappingArray[id] = Biome.OCEAN;
+                mappingArray[biomeID] = Biome.OCEAN;
 
             } catch (Exception e)
             {
@@ -78,27 +79,27 @@ public class CustomBiome extends BiomeBase
     @SuppressWarnings("unchecked")
     public void setEffects(BiomeConfig config)
     {
-        this.am = config.biomeHeight;
-        this.an = config.biomeVolatility;
-        this.ai = ((BukkitMaterialData) config.surfaceBlock).internalBlock();
-        this.ak = ((BukkitMaterialData) config.groundBlock).internalBlock();
+        this.rootHeight = config.biomeHeight;
+        this.heightVariation = config.biomeVolatility;
+        this.topBlock = ((BukkitMaterialData) config.surfaceBlock).internalBlock();
+        this.fillerBlock = ((BukkitMaterialData) config.groundBlock).internalBlock();
         this.temperature = config.biomeTemperature;
-        this.humidity = config.biomeWetness;
-        if (this.humidity == 0)
+        this.rainfall = config.biomeWetness;
+        if (this.rainfall == 0)
         {
-            this.b(); // this.disableRain()
+            this.setDisableRain(); // this.disableRain()
         }
 
         // Mob spawning
-        addMobs(this.as, config.spawnMonstersAddDefaults, config.spawnMonsters);
-        addMobs(this.at, config.spawnCreaturesAddDefaults, config.spawnCreatures);
-        addMobs(this.au, config.spawnWaterCreaturesAddDefaults, config.spawnWaterCreatures);
-        addMobs(this.av, config.spawnAmbientCreaturesAddDefaults, config.spawnAmbientCreatures);
+        addMobs(this.spawnableMonsterList, config.spawnMonstersAddDefaults, config.spawnMonsters);
+        addMobs(this.spawnableCreatureList, config.spawnCreaturesAddDefaults, config.spawnCreatures);
+        addMobs(this.spawnableWaterCreatureList, config.spawnWaterCreaturesAddDefaults, config.spawnWaterCreatures);
+        addMobs(this.spawnableCaveCreatureList, config.spawnAmbientCreaturesAddDefaults, config.spawnAmbientCreatures);
     }
 
     // Adds the mobs to the internal list. Displays a warning for each mob
     // type it doesn't understand
-    protected void addMobs(List<BiomeMeta> internalList, boolean addDefaults, List<WeightedMobSpawnGroup> configList)
+    protected void addMobs(List<SpawnListEntry> internalList, boolean addDefaults, List<WeightedMobSpawnGroup> configList)
     {
         if (!addDefaults)
         {
@@ -109,13 +110,13 @@ public class CustomBiome extends BiomeBase
             Class<? extends Entity> entityClass = getEntityClass(mobGroup);
             if (entityClass != null)
             {
-                internalList.add(new BiomeMeta(entityClass, mobGroup.getWeight(), mobGroup.getMin(), mobGroup.getMax()));
+                internalList.add(new SpawnListEntry(entityClass, mobGroup.getWeight(), mobGroup.getMin(), mobGroup.getMax()));
             } else
             {
                 // The .toLowerCase() is just a safeguard so that we get
                 // notified if this.af is no longer the biome name
                 TerrainControl.log(LogMarker.WARN, "Mob type {} not found in {}",
-                        new Object[] {mobGroup.getMobName(), this.af.toLowerCase()});
+                        new Object[] {mobGroup.getMobName(), this.biomeName.toLowerCase()});
             }
         }
     }
@@ -125,17 +126,6 @@ public class CustomBiome extends BiomeBase
     protected Class<? extends Entity> getEntityClass(WeightedMobSpawnGroup mobGroup)
     {
         String mobName = MobNames.getInternalMinecraftName(mobGroup.getMobName());
-        try
-        {
-            Field entitiesField = EntityTypes.class.getDeclaredField("c");
-            entitiesField.setAccessible(true);
-            Map<String, Class<? extends Entity>> entitiesList = (Map<String, Class<? extends Entity>>) entitiesField.get(null);
-            return entitiesList.get(mobName);
-        } catch (Exception e)
-        {
-            TerrainControl.log(LogMarker.FATAL, "Someone forgot to update the mob spawning code! Please report!");
-            TerrainControl.printStackTrace(LogMarker.FATAL, e);
-            return null;
-        }
+        return (Class<? extends Entity>) EntityList.stringToClassMapping.get(mobName);
     }
 }

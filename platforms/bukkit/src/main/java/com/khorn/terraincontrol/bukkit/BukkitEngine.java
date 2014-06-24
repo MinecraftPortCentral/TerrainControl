@@ -6,9 +6,10 @@ import com.khorn.terraincontrol.TerrainControlEngine;
 import com.khorn.terraincontrol.configuration.standard.PluginStandardValues;
 import com.khorn.terraincontrol.exception.InvalidConfigException;
 import com.khorn.terraincontrol.util.minecraftTypes.DefaultMaterial;
-import net.minecraft.server.v1_7_R3.Block;
 
 import java.io.File;
+
+import net.minecraft.block.Block;
 
 public class BukkitEngine extends TerrainControlEngine
 {
@@ -45,7 +46,7 @@ public class BukkitEngine extends TerrainControlEngine
         // This is so that things like "minecraft:stone" aren't parsed
         // as the block "minecraft" with data "stone", but instead as the
         // block "minecraft:stone" with no block data.
-        Block block = Block.b(input);
+        Block block = Block.getBlockFromName(input);
         if (block != null)
         {
             return new BukkitMaterialData(block, 0);
@@ -80,19 +81,19 @@ public class BukkitEngine extends TerrainControlEngine
         }
 
         // Get the material belonging to the block and data
-        Block block = Block.b(blockName);
+        Block block = Block.getBlockFromName(blockName);
         if (block != null)
         {
             return new BukkitMaterialData(block, blockData);
         }
         DefaultMaterial defaultMaterial = DefaultMaterial.getMaterial(blockName);
-        if (defaultMaterial != DefaultMaterial.UNKNOWN_BLOCK)
+        if (defaultMaterial != null)
         {
             return new BukkitMaterialData(defaultMaterial, blockData);
         }
 
         // Failed
-        throw new InvalidConfigException("Unknown material: " + input);
+        throw new InvalidConfigException("Unkown material: " + input);
     }
 
     @Override

@@ -1,10 +1,11 @@
 package com.khorn.terraincontrol.bukkit;
 
+import net.minecraft.block.Block;
+
 import com.khorn.terraincontrol.LocalMaterialData;
 import com.khorn.terraincontrol.TerrainControl;
 import com.khorn.terraincontrol.util.helpers.BlockHelper;
 import com.khorn.terraincontrol.util.minecraftTypes.DefaultMaterial;
-import net.minecraft.server.v1_7_R3.Block;
 
 /**
  * Implementation of LocalMaterial that wraps one of Minecraft's Blocks.
@@ -23,7 +24,7 @@ public class BukkitMaterialData implements LocalMaterialData
 
     public BukkitMaterialData(DefaultMaterial defaultMaterial, int data)
     {
-        this.block = Block.e(defaultMaterial.id);
+        this.block = Block.getBlockById(defaultMaterial.id);
         this.data = (byte) data;
     }
 
@@ -65,7 +66,7 @@ public class BukkitMaterialData implements LocalMaterialData
     @Override
     public int getBlockId()
     {
-        return Block.b(block);
+        return Block.getIdFromBlock(block);
     }
 
     @Override
@@ -77,9 +78,9 @@ public class BukkitMaterialData implements LocalMaterialData
             // Use Minecraft's name
             if (data != 0)
             {
-                return Block.REGISTRY.c(block) + ":" + data;
+                return Block.blockRegistry.getNameForObject(block) + ":" + data;
             }
-            return Block.REGISTRY.c(block);
+            return Block.blockRegistry.getNameForObject(block);
         } else
         {
             // Use our name

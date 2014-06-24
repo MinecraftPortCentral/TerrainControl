@@ -3,7 +3,10 @@ package com.khorn.terraincontrol.bukkit.generator.structures;
 import com.khorn.terraincontrol.LocalWorld;
 import com.khorn.terraincontrol.bukkit.util.WorldHelper;
 import com.khorn.terraincontrol.configuration.BiomeConfig;
-import net.minecraft.server.v1_7_R3.*;
+import net.minecraft.world.World;
+import net.minecraft.world.gen.structure.ComponentScatteredFeaturePieces;
+import net.minecraft.world.gen.structure.StructureComponent;
+import net.minecraft.world.gen.structure.StructureStart;
 
 import java.util.Random;
 
@@ -14,35 +17,32 @@ public class RareBuildingStart extends StructureStart
     {
         LocalWorld localWorld = WorldHelper.toLocalWorld(world);
         BiomeConfig biomeConfig = localWorld.getCalculatedBiome(chunkX * 16 + 8, chunkZ * 16 + 8).getBiomeConfig();
-        StructurePiece building;
+        StructureComponent building;
         switch (biomeConfig.rareBuildingType)
         {
             case desertPyramid:
-                building = new WorldGenPyramidPiece(random, chunkX * 16, chunkZ * 16);
+                building = new ComponentScatteredFeaturePieces.DesertPyramid(random, chunkX * 16, chunkZ * 16);
                 break;
             case jungleTemple:
-                building = new WorldGenJungleTemple(random, chunkX * 16, chunkZ * 16);
+                building = new ComponentScatteredFeaturePieces.JunglePyramid(random, chunkX * 16, chunkZ * 16);
                 break;
             case swampHut:
-                building = new WorldGenWitchHut(random, chunkX * 16, chunkZ * 16);
+                building = new ComponentScatteredFeaturePieces.SwampHut(random, chunkX * 16, chunkZ * 16);
                 break;
             case disabled:
             default:
                 // Should never happen, but on biome borders there is chance
-                // that a
-                // structure gets started in a biome where it shouldn't.
+                // that a structure gets started in a biome where it shouldn't.
                 building = null;
                 break;
         }
 
         if (building != null)
         {
-            // Add building to components
-            this.a.add(building);
+            this.components.add(building);
         }
 
-        // Update boundingbox
-        this.c();
+        this.updateBoundingBox();
     }
 
     public RareBuildingStart()

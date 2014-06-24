@@ -6,15 +6,19 @@ import com.khorn.terraincontrol.bukkit.util.WorldHelper;
 import com.khorn.terraincontrol.configuration.BiomeConfig.RareBuildingType;
 import com.khorn.terraincontrol.configuration.WorldSettings;
 import com.khorn.terraincontrol.util.minecraftTypes.StructureNames;
-import net.minecraft.server.v1_7_R3.*;
+import net.minecraft.entity.monster.EntityWitch;
+import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
+import net.minecraft.world.gen.structure.MapGenStructure;
+import net.minecraft.world.gen.structure.StructureStart;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public class RareBuildingGen extends StructureGenerator
+public class RareBuildingGen extends MapGenStructure
 {
-    public List<BiomeBase> biomeList;
+    public List<BiomeGenBase> biomeList;
 
     /**
      * contains possible spawns for scattered features
@@ -35,7 +39,7 @@ public class RareBuildingGen extends StructureGenerator
     @SuppressWarnings({"unchecked", "rawtypes"})
     public RareBuildingGen(WorldSettings configs)
     {
-        biomeList = new ArrayList<BiomeBase>();
+        biomeList = new ArrayList<BiomeGenBase>();
 
         for (LocalBiome biome : configs.biomes)
         {
@@ -49,15 +53,13 @@ public class RareBuildingGen extends StructureGenerator
 
         this.scatteredFeatureSpawnList = new ArrayList();
         this.maxDistanceBetweenScatteredFeatures = configs.worldConfig.maximumDistanceBetweenRareBuildings;
-        // Minecraft's internal minimum distance is one chunk lower than TC's
-        // value
+        // Minecraft's internal minimum distance is one lower than TC's value
         this.minDistanceBetweenScatteredFeatures = configs.worldConfig.minimumDistanceBetweenRareBuildings - 1;
-        this.scatteredFeatureSpawnList.add(new BiomeMeta(EntityWitch.class, 1, 1, 1));
+        this.scatteredFeatureSpawnList.add(new SpawnListEntry(EntityWitch.class, 1, 1, 1));
     }
 
     @Override
-    // canSpawnStructureAtChunkCoords
-    protected boolean a(int chunkX, int chunkZ)
+    protected boolean canSpawnStructureAtCoords(int chunkX, int chunkZ)
     {
         int var3 = chunkX;
         int var4 = chunkZ;
@@ -74,7 +76,7 @@ public class RareBuildingGen extends StructureGenerator
 
         int var5 = chunkX / this.maxDistanceBetweenScatteredFeatures;
         int var6 = chunkZ / this.maxDistanceBetweenScatteredFeatures;
-        Random random = this.c.A(var5, var6, 14357617);
+        Random random = this.worldObj.setRandomSeed(var5, var6, 14357617);
         var5 *= this.maxDistanceBetweenScatteredFeatures;
         var6 *= this.maxDistanceBetweenScatteredFeatures;
         var5 += random.nextInt(this.maxDistanceBetweenScatteredFeatures - this.minDistanceBetweenScatteredFeatures);
@@ -82,11 +84,11 @@ public class RareBuildingGen extends StructureGenerator
 
         if (var3 == var5 && var4 == var6)
         {
-            int biomeAtPosition = WorldHelper.getGenerationId(this.c.getWorldChunkManager().getBiome(var3 * 16 + 8, var4 * 16 + 8));
+            BiomeGenBase biomeAtPosition = this.worldObj.getWorldChunkManager().getBiomeGenAt(var3 * 16 + 8, var4 * 16 + 8);
 
-            for (BiomeBase biome : biomeList)
+            for (BiomeGenBase biome : biomeList)
             {
-                if (biomeAtPosition == WorldHelper.getGenerationId(biome))
+                if (biomeAtPosition.biomeID == biome.biomeID)
                 {
                     return true;
                 }
@@ -97,10 +99,9 @@ public class RareBuildingGen extends StructureGenerator
     }
 
     @Override
-    // getStructureStart
-    protected StructureStart b(int chunkX, int chunkZ)
+    protected StructureStart getStructureStart(int chunkX, int chunkZ)
     {
-        return new RareBuildingStart(this.c, this.b, chunkX, chunkZ);
+        return new RareBuildingStart(this.worldObj, this.rand, chunkX, chunkZ);
     }
 
     /**
@@ -112,20 +113,8 @@ public class RareBuildingGen extends StructureGenerator
         return this.scatteredFeatureSpawnList;
     }
 
-    // Two methods to help MCPC+ dynamically rename things.
-    // It has problems with classes that extend native Minecraft classes
-    public void prepare(World world, int chunkX, int chunkZ)
-    {
-        a(null, world, chunkX, chunkZ, null);
-    }
-
-    public void place(World world, Random random, int chunkX, int chunkZ)
-    {
-        a(world, random, chunkX, chunkZ);
-    }
-
     @Override
-    public String a()
+    public String func_143025_a()
     {
         return StructureNames.RARE_BUILDING;
     }

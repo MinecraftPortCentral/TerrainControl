@@ -11,13 +11,15 @@ import com.khorn.terraincontrol.configuration.WorldSettings;
 import com.khorn.terraincontrol.configuration.standard.PluginStandardValues;
 import com.khorn.terraincontrol.logging.LogMarker;
 import com.khorn.terraincontrol.util.minecraftTypes.StructureNames;
-import net.minecraft.server.v1_7_R3.BiomeBase;
-import net.minecraft.server.v1_7_R3.WorldGenFactory;
+
+import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.gen.structure.MapGenStructureIO;
+
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.craftbukkit.v1_7_R3.block.CraftBlock;
+import org.bukkit.craftbukkit.block.CraftBlock;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -77,27 +79,9 @@ public class TCPlugin extends JavaPlugin
             setEnabled(false);
         } else
         {
-            boolean cauldron = false;
-            if (Bukkit.getVersion().contains("Cauldron"))
-            {
-                // We're on Cauldron, so enable some remappings
-                cauldron = true;
-                TerrainControl.log(LogMarker.INFO, "Cauldron detected.");
-            }
-
             // Register structures
-            try
-            {
-                String methodName = cauldron ? "func_143034_b" : "b";
-                Method registerStructure = WorldGenFactory.class.getDeclaredMethod(methodName, Class.class, String.class);
-                registerStructure.setAccessible(true);
-                registerStructure.invoke(null, RareBuildingStart.class, StructureNames.RARE_BUILDING);
-                registerStructure.invoke(null, VillageStart.class, StructureNames.VILLAGE);
-            } catch (Exception e)
-            {
-                TerrainControl.log(LogMarker.FATAL, "Failed to register structures:");
-                TerrainControl.printStackTrace(LogMarker.FATAL, e);
-            }
+            MapGenStructureIO.registerStructure(RareBuildingStart.class, StructureNames.RARE_BUILDING);
+            MapGenStructureIO.registerStructure(VillageStart.class, StructureNames.VILLAGE);
 
             // Start the engine
             this.commandExecutor = new TCCommandExecutor(this);
@@ -150,7 +134,7 @@ public class TCPlugin extends JavaPlugin
         // Hack to initialize CraftBukkit's biome mappings
         // This is really needed. Try for yourself if you don't believe it,
         // you will get a java.lang.IllegalArgumentException when adding biomes
-        CraftBlock.biomeBaseToBiome(BiomeBase.OCEAN);
+        CraftBlock.biomeBaseToBiome(BiomeGenBase.ocean);
 
         // Load settings
         File baseFolder = getWorldSettingsFolder(worldName);

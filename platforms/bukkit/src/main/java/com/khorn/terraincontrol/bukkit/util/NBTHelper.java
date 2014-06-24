@@ -3,7 +3,7 @@ package com.khorn.terraincontrol.bukkit.util;
 import com.khorn.terraincontrol.TerrainControl;
 import com.khorn.terraincontrol.logging.LogMarker;
 import com.khorn.terraincontrol.util.NamedBinaryTag;
-import net.minecraft.server.v1_7_R3.*;
+import net.minecraft.nbt.*;
 
 import java.lang.reflect.Field;
 import java.util.Map;
@@ -21,7 +21,7 @@ public class NBTHelper
      */
     @SuppressWarnings("unchecked")
     // ^ We know that NBTTagCompound.map is a Map<String, NBTBase>
-    //   So it is safe to suppress this warning
+    // So it is safe to suppress this warning
     public static NamedBinaryTag getNBTFromNMSTagCompound(String name, NBTTagCompound nmsTag)
     {
         NamedBinaryTag compoundTag = new NamedBinaryTag(NamedBinaryTag.Type.TAG_Compound, name, new NamedBinaryTag[] {new NamedBinaryTag(NamedBinaryTag.Type.TAG_End, null, null)});
@@ -49,7 +49,7 @@ public class NBTHelper
         for (Entry<String, NBTBase> entry : nmsChildTags.entrySet())
         {
             NBTBase nmsChildTag = entry.getValue();
-            NamedBinaryTag.Type type = NamedBinaryTag.Type.values()[nmsChildTag.getTypeId()];
+            NamedBinaryTag.Type type = NamedBinaryTag.Type.values()[nmsChildTag.getId()];
             switch (type)
             {
                 case TAG_End:
@@ -92,34 +92,34 @@ public class NBTHelper
      */
     private static NamedBinaryTag getNBTFromNMSTagList(String name, NBTTagList nmsListTag)
     {
-        if (nmsListTag.size() == 0)
+        if (nmsListTag.tagCount() == 0)
         {
             // Nothing to return
             return null;
         }
 
-        NamedBinaryTag.Type listType = NamedBinaryTag.Type.values()[nmsListTag.d()];
+        NamedBinaryTag.Type listType = NamedBinaryTag.Type.values()[nmsListTag.func_150303_d()];
         NamedBinaryTag listTag = new NamedBinaryTag(name, listType);
 
         // Add all child tags
-        for (int i = 0; i < nmsListTag.size(); i++)
+        for (int i = 0; i < nmsListTag.tagCount(); i++)
         {
             switch (listType)
             {
                 case TAG_Int_Array:
-                    listTag.addTag(new NamedBinaryTag(listType, null, nmsListTag.c(i)));
+                    listTag.addTag(new NamedBinaryTag(listType, null, nmsListTag.func_150306_c(i)));
                     break;
                 case TAG_Float:
-                    listTag.addTag(new NamedBinaryTag(listType, null, nmsListTag.e(i)));
+                    listTag.addTag(new NamedBinaryTag(listType, null, nmsListTag.func_150308_e(i)));
                     break;
                 case TAG_Double:
-                    listTag.addTag(new NamedBinaryTag(listType, null, nmsListTag.d(i)));
+                    listTag.addTag(new NamedBinaryTag(listType, null, nmsListTag.func_150309_d(i)));
                     break;
                 case TAG_String:
-                    listTag.addTag(new NamedBinaryTag(listType, null, nmsListTag.f(i)));
+                    listTag.addTag(new NamedBinaryTag(listType, null, nmsListTag.getStringTagAt(i)));
                     break;
                 case TAG_Compound:
-                    listTag.addTag(getNBTFromNMSTagCompound(null, nmsListTag.get(i)));
+                    listTag.addTag(getNBTFromNMSTagCompound(null, nmsListTag.getCompoundTagAt(i)));
                     break;
                 default:
                     TerrainControl.log(LogMarker.INFO, "Cannot convert list subtype {} from it's NMS value", new Object[] {listType});
@@ -140,27 +140,27 @@ public class NBTHelper
      */
     private static Object getValueFromNms(NBTBase nmsTag)
     {
-        NamedBinaryTag.Type type = NamedBinaryTag.Type.values()[nmsTag.getTypeId()];
+        NamedBinaryTag.Type type = NamedBinaryTag.Type.values()[nmsTag.getId()];
         switch (type)
         {
             case TAG_Byte:
-                return ((NBTTagByte) nmsTag).f();
+                return ((NBTTagByte) nmsTag).func_150290_f();
             case TAG_Short:
-                return ((NBTTagShort) nmsTag).e();
+                return ((NBTTagShort) nmsTag).func_150289_e();
             case TAG_Int:
-                return ((NBTTagInt) nmsTag).d();
+                return ((NBTTagInt) nmsTag).func_150287_d();
             case TAG_Long:
-                return ((NBTTagLong) nmsTag).c();
+                return ((NBTTagLong) nmsTag).func_150291_c();
             case TAG_Float:
-                return ((NBTTagFloat) nmsTag).h();
+                return ((NBTTagFloat) nmsTag).func_150288_h();
             case TAG_Double:
-                return ((NBTTagDouble) nmsTag).g();
+                return ((NBTTagDouble) nmsTag).func_150286_g();
             case TAG_Byte_Array:
-                return ((NBTTagByteArray) nmsTag).c();
+                return ((NBTTagByteArray) nmsTag).func_150292_c();
             case TAG_String:
-                return ((NBTTagString) nmsTag).a_();
+                return ((NBTTagString) nmsTag).func_150285_a_();
             case TAG_Int_Array:
-                return ((NBTTagIntArray) nmsTag).c();
+                return ((NBTTagIntArray) nmsTag).func_150302_c();
             default:
                 // Cannot read this from a tag
                 throw new IllegalArgumentException(type + "doesn't have a simple value!");
@@ -193,13 +193,13 @@ public class NBTHelper
                 case TAG_Byte_Array:
                 case TAG_String:
                 case TAG_Int_Array:
-                    nmsTag.set(tag.getName(), createTagNms(tag.getType(), tag.getValue()));
+                    nmsTag.setTag(tag.getName(), createTagNms(tag.getType(), tag.getValue()));
                     break;
                 case TAG_List:
-                    nmsTag.set(tag.getName(), getNMSFromNBTTagList(tag));
+                    nmsTag.setTag(tag.getName(), getNMSFromNBTTagList(tag));
                     break;
                 case TAG_Compound:
-                    nmsTag.set(tag.getName(), getNMSFromNBTTagCompound(tag));
+                    nmsTag.setTag(tag.getName(), getNMSFromNBTTagCompound(tag));
                     break;
                 default:
                     break;
@@ -234,13 +234,13 @@ public class NBTHelper
                 case TAG_Byte_Array:
                 case TAG_String:
                 case TAG_Int_Array:
-                    nmsTag.add(createTagNms(tag.getType(), tag.getValue()));
+                    nmsTag.appendTag(createTagNms(tag.getType(), tag.getValue()));
                     break;
                 case TAG_List:
-                    nmsTag.add(getNMSFromNBTTagList(tag));
+                    nmsTag.appendTag(getNMSFromNBTTagList(tag));
                     break;
                 case TAG_Compound:
-                    nmsTag.add(getNMSFromNBTTagCompound(tag));
+                    nmsTag.appendTag(getNMSFromNBTTagCompound(tag));
                     break;
                 default:
                     break;
@@ -284,5 +284,8 @@ public class NBTHelper
                 throw new IllegalArgumentException(type + "doesn't have a simple value!");
         }
     }
-}
 
+    private NBTHelper()
+    {
+    }
+}

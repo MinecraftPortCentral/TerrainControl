@@ -1,8 +1,9 @@
 package com.khorn.terraincontrol.bukkit;
 
+import net.minecraft.world.biome.BiomeGenBase;
+
 import com.khorn.terraincontrol.LocalMaterialData;
 import com.khorn.terraincontrol.configuration.standard.MojangSettings;
-import net.minecraft.server.v1_7_R3.BiomeBase;
 
 /**
  * Gets some default settings from the BiomeBase instance. The settings in the
@@ -12,7 +13,7 @@ import net.minecraft.server.v1_7_R3.BiomeBase;
  */
 public final class BukkitMojangSettings implements MojangSettings
 {
-    private final BiomeBase biomeBase;
+    private final BiomeGenBase biomeBase;
 
     /**
      * Creates an instance that provides access to the default settings of the
@@ -23,7 +24,7 @@ public final class BukkitMojangSettings implements MojangSettings
      */
     public static MojangSettings fromId(int biomeId)
     {
-        return fromBiomeBase(BiomeBase.getBiome(biomeId));
+        return fromBiomeBase(BiomeGenBase.getBiome(biomeId));
     }
 
     /**
@@ -33,12 +34,12 @@ public final class BukkitMojangSettings implements MojangSettings
      * @param biomeBase The biome.
      * @return The settings.
      */
-    public static MojangSettings fromBiomeBase(BiomeBase biomeBase)
+    public static MojangSettings fromBiomeBase(BiomeGenBase biomeBase)
     {
         return new BukkitMojangSettings(biomeBase);
     }
 
-    private BukkitMojangSettings(BiomeBase biomeBase)
+    private BukkitMojangSettings(BiomeGenBase biomeBase)
     {
         this.biomeBase = biomeBase;
     }
@@ -52,31 +53,31 @@ public final class BukkitMojangSettings implements MojangSettings
     @Override
     public float getWetness()
     {
-        return biomeBase.humidity;
+        return biomeBase.rainfall;
     }
 
     @Override
     public float getSurfaceHeight()
     {
-        return biomeBase.am;
+        return biomeBase.rootHeight;
     }
 
     @Override
     public float getSurfaceVolatility()
     {
-        return biomeBase.an;
+        return biomeBase.heightVariation;
     }
 
     @Override
     public LocalMaterialData getSurfaceBlock()
     {
-        return new BukkitMaterialData(biomeBase.ai, 0);
+        return new BukkitMaterialData(biomeBase.topBlock, 0);
     }
 
     @Override
     public LocalMaterialData getGroundBlock()
     {
-        return new BukkitMaterialData(biomeBase.ak, 0);
+        return new BukkitMaterialData(biomeBase.fillerBlock, 0);
     }
 
 }
